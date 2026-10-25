@@ -19,9 +19,10 @@ Tokenı GitHub dosyalarına, issue'lara veya sohbetlere yazmayın.
 - Alıcı: `TR6c5N8GwTF1FKtQsGVTSPdQfh9m74NXYB`
 - VIP kanal kimliği: `-1004409446943`
 
-Müşteri botla özel konuşmada `/abonelik T_GONDEREN_ADRESI` yazar, tam 9,90
-USDT gönderir ve `/odeme TXID` ile onaylatır. `/davet` kişisel VIP katılım
-bağlantısını verir. Ayrıntılar için `PAYMENT_SETUP_TR.md` dosyasına bakın.
+Müşteri botla özel konuşmada `/subscribe T_SENDER_ADDRESS` yazar, tam 9,90
+USDT gönderir ve `/payment TXID` ile onaylatır. `/invite` kişisel VIP katılım
+bağlantısını verir. Eski Türkçe komutlar da desteklenir. Ayrıntılar için
+`PAYMENT_SETUP_TR.md` dosyasına bakın.
 
 Ödeme doğrulaması cüzdan private key veya seed phrase kullanmaz. Onaylanmış
 zincir verisini, resmî USDT kontratını, tutarı, gönderici/alıcı adreslerini ve

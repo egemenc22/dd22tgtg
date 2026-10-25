@@ -40,10 +40,11 @@ class PaymentTests(unittest.TestCase):
   with self.assertRaisesRegex(ValueError,'predates'):
    p.claim_order(self.c,7,'a'*64,CFG,fetcher=lambda _:fixture(timestamp=900),clock=1010)
  def test_private_command_creates_order(self):
-  event={'message':{'chat':{'id':7,'type':'private'},'from':{'id':7,'username':'a'},'text':'/abonelik '+SENDER}}
+  event={'message':{'chat':{'id':7,'type':'private'},'from':{'id':7,'username':'a'},'text':'/subscribe '+SENDER}}
   with patch.object(b,'telegram_send',return_value='1') as send:
    self.assertEqual(b.process_payment_message(self.c,event,CFG,'token',clock=1000),1)
    self.assertIn('9.90 USDT',send.call_args.args[2])
+   self.assertIn('Order #',send.call_args.args[2])
  def test_membership_bot_once_polls_once(self):
   with patch.object(b,'DB',':memory:'),patch.object(b,'poll_vip_join_requests',return_value=0) as poll:
    b.run_membership_bot(CFG,once=True)

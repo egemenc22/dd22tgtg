@@ -181,28 +181,28 @@ def process_payment_message(con,event,cfg,token,clock=None):
     text=str(msg.get('text','')).strip();uid=int(sender['id']);stamp=now() if clock is None else clock
     username=str(sender.get('username',''))
     if text.startswith('/start'):
-        telegram_send(token,uid,"EGONIA VIP | 9,90 USDT / 30 gun\n1) /abonelik T_GONDEREN_ADRESIN\n2) Trust Wallet ile verilen adrese USDT-TRC20 gonder\n3) /odeme TXID\nOdeme adresine sadece TRON agindan resmi USDT gonder. Seed/private key asla paylasma.")
-    elif text.startswith('/abonelik'):
+        telegram_send(token,uid,"EGONIA VIP | 9.90 USDT / 30 days\n1) Send /subscribe YOUR_TRON_SENDER_ADDRESS\n2) Pay USDT via TRON (TRC20) to the address shown in your order\n3) Send /payment TXID\nUse only official USDT on the TRON network. Never share your seed phrase or private key.")
+    elif text.startswith(('/abonelik','/subscribe')):
         parts=text.split()
-        if len(parts)!=2:raise ValueError('Kullanim: /abonelik T_GONDEREN_ADRESIN')
+        if len(parts)!=2:raise ValueError('Usage: /subscribe YOUR_TRON_SENDER_ADDRESS')
         order=payment_service.create_order(con,uid,username,parts[1],cfg,stamp)
         price=int(order['expected_atomic'])/1_000_000
-        telegram_send(token,uid,f"Siparis #{order['id']}\nAg: TRON (TRC20)\nTutar: {price:.2f} USDT\nAlici: {order['recipient_address']}\nGonderdikten sonra: /odeme TXID\nSiparis 2 saat gecerlidir.")
-    elif text.startswith('/odeme'):
+        telegram_send(token,uid,f"Order #{order['id']}\nNetwork: TRON (TRC20)\nExact amount: {price:.2f} USDT\nRecipient: {order['recipient_address']}\nAfter payment, send: /payment TXID\nThis order expires in 2 hours.")
+    elif text.startswith(('/odeme','/payment')):
         parts=text.split()
-        if len(parts)!=2:raise ValueError('Kullanim: /odeme 64_KARAKTER_TXID')
+        if len(parts)!=2:raise ValueError('Usage: /payment 64_CHARACTER_TXID')
         expiry=payment_service.claim_order(con,uid,parts[1],cfg,clock=stamp)
-        telegram_send(token,uid,f"Odeme onaylandi. VIP uyeligin {utc(expiry)} tarihine kadar aktif. Davet icin /davet yaz.")
-    elif text.startswith('/davet'):
+        telegram_send(token,uid,f"Payment confirmed. Your VIP membership is active until {utc(expiry)}. Send /invite to receive your private join link.")
+    elif text.startswith(('/davet','/invite')):
         member=con.execute("SELECT * FROM members WHERE user_id=? AND status='active' AND expires_at>?",(uid,stamp)).fetchone()
-        if not member:raise ValueError('Aktif VIP uyeligin bulunamadi')
+        if not member:raise ValueError('No active VIP membership was found')
         vip=os.getenv('TELEGRAM_VIP_CHAT_ID','')
         if not vip:raise RuntimeError('VIP chat is not configured')
         link=member['invite_link']
         if not link:
             link=telegram_call(token,'createChatInviteLink',{'chat_id':vip,'name':f'VIP-{uid}','expire_date':stamp+max(1,int(cfg.get('vip_invite_expire_hours',24)))*3600,'creates_join_request':'true'})['invite_link']
             con.execute('UPDATE members SET invite_link=?,updated_at=? WHERE user_id=?',(link,stamp,uid));con.commit()
-        telegram_send(token,uid,'VIP katilim baglantin: '+link)
+        telegram_send(token,uid,'Your private VIP join link: '+link)
     else:return 0
     return 1
 
@@ -222,7 +222,7 @@ def poll_vip_join_requests(con, cfg):
             elif event.get('message') and payments:count+=process_payment_message(con,event,cfg,token)
         except ValueError as exc:
             chat=(event.get('message') or {}).get('chat',{}).get('id')
-            if chat:telegram_send(token,chat,'Odeme dogrulanamadi: '+str(exc))
+            if chat:telegram_send(token,chat,'Payment could not be verified: '+str(exc))
         con.execute("INSERT OR REPLACE INTO system(key,value) VALUES('telegram_update_offset',?)",(str(int(event['update_id'])+1),))
         con.commit()
     return count
