@@ -181,13 +181,18 @@ def process_payment_message(con,event,cfg,token,clock=None):
     text=str(msg.get('text','')).strip();uid=int(sender['id']);stamp=now() if clock is None else clock
     username=str(sender.get('username',''))
     if text.startswith('/start'):
-        telegram_send(token,uid,"EGONIA VIP | 9.90 USDT / 30 days\n1) Send /subscribe YOUR_TRON_SENDER_ADDRESS\n2) Pay USDT via TRON (TRC20) to the address shown in your order\n3) Send /payment TXID\nUse only official USDT on the TRON network. Never share your seed phrase or private key.")
+        set_payment_state(con,uid,'idle')
+        keyboard={'inline_keyboard':[
+          [{'text':'🔐 Unlock VIP — 9.90 USDT','callback_data':'buy_vip'}],
+          [{'text':'📡 Free Signals','url':'https://t.me/EgoniaSignalsFree'},{'text':'How It Works','callback_data':'how_it_works'}]]}
+        telegram_send(token,uid,"⚡ EGONIA VIP\n\nAI-powered LONG & SHORT crypto scalp alerts.\n\n✓ Entry, target and stop levels\n✓ Up to 6 curated alerts per day\n✓ Instant private-channel access\n✓ 30 days for 9.90 USDT\n\nPayment: USDT on TRON (TRC20)\n\nResearch alerts only. Trading involves risk.",keyboard)
     elif text.startswith(('/abonelik','/subscribe')):
         parts=text.split()
-        if len(parts)!=2:raise ValueError('Usage: /subscribe YOUR_TRON_SENDER_ADDRESS')
-        order=payment_service.create_order(con,uid,username,parts[1],cfg,stamp)
-        price=int(order['expected_atomic'])/1_000_000
-        telegram_send(token,uid,f"Order #{order['id']}\nNetwork: TRON (TRC20)\nExact amount: {price:.2f} USDT\nRecipient: {order['recipient_address']}\nAfter payment, send: /payment TXID\nThis order expires in 2 hours.")
+        if len(parts)==1:
+            set_payment_state(con,uid,'awaiting_sender')
+            telegram_send(token,uid,"Send the TRON address you will pay from.\n\nIt starts with T and can be copied from Trust Wallet. Never send your seed phrase or private key.")
+        elif len(parts)==2:create_payment_order(con,uid,username,parts[1],cfg,token,stamp)
+        else:raise ValueError('Usage: /subscribe YOUR_TRON_SENDER_ADDRESS')
     elif text.startswith(('/odeme','/payment')):
         parts=text.split()
         if len(parts)!=2:raise ValueError('Usage: /payment 64_CHARACTER_TXID')
@@ -198,9 +203,45 @@ def process_payment_message(con,event,cfg,token,clock=None):
             telegram_send(token,uid,f"Payment confirmed. Your VIP membership is active until {utc(expiry)}. Send /invite to retry your private join link.")
         else:
             telegram_send(token,uid,f"✅ Payment confirmed\nVIP active until: {utc(expiry)}\n\nYour private VIP join link:\n{link}")
+        set_payment_state(con,uid,'paid')
     elif text.startswith(('/davet','/invite')):
         link=ensure_vip_invite(con,uid,cfg,token,stamp)
         telegram_send(token,uid,'Your private VIP join link: '+link)
+    elif get_payment_state(con,uid)=='awaiting_sender' and text.startswith('T'):
+        create_payment_order(con,uid,username,text,cfg,token,stamp)
+    elif get_payment_state(con,uid)=='awaiting_txid' and len(text)==64 and all(c in '0123456789abcdefABCDEF' for c in text):
+        expiry=payment_service.claim_order(con,uid,text,cfg,clock=stamp)
+        try:link=ensure_vip_invite(con,uid,cfg,token,stamp)
+        except Exception as exc:
+            logging.warning('Payment confirmed but invite creation failed for %s: %s',uid,exc)
+            telegram_send(token,uid,f"Payment confirmed. Your VIP membership is active until {utc(expiry)}. Send /invite to retry your private join link.")
+        else:telegram_send(token,uid,f"✅ Payment confirmed\nVIP active until: {utc(expiry)}\n\nYour private VIP join link:\n{link}")
+        set_payment_state(con,uid,'paid')
+    else:return 0
+    return 1
+
+def payment_state_key(uid):return f'payment_state:{int(uid)}'
+def set_payment_state(con,uid,state):
+    con.execute('INSERT OR REPLACE INTO system(key,value) VALUES(?,?)',(payment_state_key(uid),state));con.commit()
+def get_payment_state(con,uid):
+    row=con.execute('SELECT value FROM system WHERE key=?',(payment_state_key(uid),)).fetchone()
+    return row['value'] if row else 'idle'
+
+def create_payment_order(con,uid,username,sender_address,cfg,token,stamp):
+    order=payment_service.create_order(con,uid,username,sender_address,cfg,stamp)
+    price=int(order['expected_atomic'])/1_000_000;set_payment_state(con,uid,'awaiting_txid')
+    telegram_send(token,uid,f"🧾 EGONIA VIP ORDER #{order['id']}\n\nNetwork: TRON (TRC20)\nExact amount: {price:.2f} USDT\nRecipient:\n{order['recipient_address']}\n\nAfter sending, paste the 64-character TXID here. No command is required.\n\n⏱ This order expires in 2 hours. Send the exact amount from the address you registered.")
+
+def process_payment_callback(con,event,cfg,token,clock=None):
+    query=event.get('callback_query') or {};sender=query.get('from') or {};uid=sender.get('id')
+    if not uid:return 0
+    telegram_call(token,'answerCallbackQuery',{'callback_query_id':query.get('id','')})
+    data=query.get('data','')
+    if data=='buy_vip':
+        set_payment_state(con,uid,'awaiting_sender')
+        telegram_send(token,uid,"🔐 START YOUR VIP MEMBERSHIP\n\nSend the TRON address you will pay from. It starts with T and can be copied from Trust Wallet.\n\nNever send your seed phrase or private key.")
+    elif data=='how_it_works':
+        telegram_send(token,uid,"HOW IT WORKS\n\n1. Send your TRON wallet address.\n2. Pay exactly 9.90 USDT via TRC20.\n3. Paste the transaction TXID.\n4. Receive your private VIP link automatically.\n\nAccess lasts 30 days. Network fees are paid separately in TRX.")
     else:return 0
     return 1
 
@@ -212,12 +253,13 @@ def poll_vip_join_requests(con, cfg):
     if not token or not vip:raise RuntimeError('Missing Telegram bot token / VIP chat')
     row=con.execute("SELECT value FROM system WHERE key='telegram_update_offset'").fetchone()
     offset=int(row['value']) if row else 0
-    result=telegram_call(token,'getUpdates',{'offset':offset,'limit':100,'timeout':0,'allowed_updates':json.dumps(['chat_join_request','message'])})
+    result=telegram_call(token,'getUpdates',{'offset':offset,'limit':100,'timeout':0,'allowed_updates':json.dumps(['chat_join_request','message','callback_query'])})
     count=0
     for event in result:
         try:
             if event.get('chat_join_request') and joins:count+=process_vip_join_requests(con,[event],vip,token)
             elif event.get('message') and payments:count+=process_payment_message(con,event,cfg,token)
+            elif event.get('callback_query') and payments:count+=process_payment_callback(con,event,cfg,token)
         except ValueError as exc:
             chat=(event.get('message') or {}).get('chat',{}).get('id')
             if chat:telegram_send(token,chat,'Payment could not be verified: '+str(exc))
@@ -238,8 +280,10 @@ def run_membership_bot(cfg,once=False):
             time.sleep(max(2,int(cfg.get('membership_poll_seconds',3))))
     finally:con.close()
 
-def telegram_send(token,chat_id,msg):
-    return str(telegram_call(token,'sendMessage',{'chat_id':chat_id,'text':msg,'disable_web_page_preview':'true'})['message_id'])
+def telegram_send(token,chat_id,msg,reply_markup=None):
+    params={'chat_id':chat_id,'text':msg,'disable_web_page_preview':'true'}
+    if reply_markup is not None:params['reply_markup']=json.dumps(reply_markup)
+    return str(telegram_call(token,'sendMessage',params)['message_id'])
 
 def vip_sales_cta(cfg):
     username=str(cfg.get('telegram_sales_bot_username','EgoniaSignalsBot')).strip().lstrip('@')

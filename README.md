@@ -32,11 +32,11 @@ Tokenı GitHub dosyalarına, issue'lara veya sohbetlere yazmayın.
 - Alıcı: `TR6c5N8GwTF1FKtQsGVTSPdQfh9m74NXYB`
 - VIP kanal kimliği: `-1004409446943`
 
-Müşteri free kanal mesajındaki bağlantıdan bota ulaşır, özel konuşmada
-`/subscribe T_SENDER_ADDRESS` yazar, tam 9,90 USDT gönderir ve `/payment TXID`
-ile onaylatır. Başarılı doğrulamada 30 günlük üyelik ve kişisel VIP katılım
-bağlantısı otomatik gönderilir. `/invite` bağlantıyı tekrar almak içindir.
-Eski Türkçe komutlar da desteklenir. Ayrıntılar için
+Müşteri free kanal mesajındaki bağlantıdan bota ulaşır ve `Unlock VIP` butonuna
+basar. Trust Wallet TRON adresini, ardından ödeme TXID'sini doğrudan yapıştırır;
+komut ezberlemesi gerekmez. Başarılı doğrulamada 30 günlük üyelik ve kişisel VIP
+katılım bağlantısı otomatik gönderilir. `/subscribe`, `/payment` ve `/invite`
+komutları yedek olarak desteklenir. Ayrıntılar için
 `PAYMENT_SETUP_TR.md` dosyasına bakın.
 
 Ödeme doğrulaması cüzdan private key veya seed phrase kullanmaz. Onaylanmış

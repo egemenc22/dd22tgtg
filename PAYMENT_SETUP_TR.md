@@ -20,11 +20,12 @@ tokenıyla başka `getUpdates` süreci veya webhook çalıştırmayın.
 
 ## Müşteri akışı
 
-1. Botla özel konuşmada `/abonelik T_GONDEREN_ADRESI` yazılır. Bu adres ödeme
-   gönderilecek alıcı adresi değil, müşterinin Trust Wallet TRON adresidir.
+1. Botla özel konuşmada `Unlock VIP` butonuna basılır ve müşterinin Trust Wallet
+   TRON adresi doğrudan gönderilir. Bu adres ödeme gönderilecek alıcı adresi
+   değil, müşterinin ödeme yapacağı adrestir.
 2. Botun verdiği alıcı adrese TRON ağından tam 9,90 resmî USDT gönderilir.
    Ağ ücreti TRX olarak ayrıca ödenir.
-3. Müşteri `/payment 64_CHARACTER_TXID` yazar.
+3. Müşteri 64 karakterli TXID'yi doğrudan bota yapıştırır.
 4. Onaylanmış transfer doğrulanınca 30 gün eklenir ve özel VIP katılım
    bağlantısı otomatik gönderilir. `/invite` bağlantıyı tekrar almak içindir;
    katılım isteği yalnızca aktif üyeye onaylanır.

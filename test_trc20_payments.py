@@ -45,7 +45,23 @@ class PaymentTests(unittest.TestCase):
   with patch.object(b,'telegram_send',return_value='1') as send:
    self.assertEqual(b.process_payment_message(self.c,event,CFG,'token',clock=1000),1)
    self.assertIn('9.90 USDT',send.call_args.args[2])
-   self.assertIn('Order #',send.call_args.args[2])
+   self.assertIn('VIP ORDER #',send.call_args.args[2])
+ def test_start_has_sales_buttons(self):
+  event={'message':{'chat':{'id':7,'type':'private'},'from':{'id':7},'text':'/start vip'}}
+  with patch.object(b,'telegram_send',return_value='1') as send:
+   self.assertEqual(b.process_payment_message(self.c,event,CFG,'token',clock=1000),1)
+   self.assertIn('EGONIA VIP',send.call_args.args[2])
+   self.assertEqual(send.call_args.args[3]['inline_keyboard'][0][0]['callback_data'],'buy_vip')
+ def test_buy_button_accepts_raw_address(self):
+  callback={'callback_query':{'id':'q1','from':{'id':7},'data':'buy_vip'}}
+  with patch.object(b,'telegram_call',return_value=True),patch.object(b,'telegram_send',return_value='1'):
+   self.assertEqual(b.process_payment_callback(self.c,callback,CFG,'token',clock=1000),1)
+  self.assertEqual(b.get_payment_state(self.c,7),'awaiting_sender')
+  address={'message':{'chat':{'id':7,'type':'private'},'from':{'id':7,'username':'a'},'text':SENDER}}
+  with patch.object(b,'telegram_send',return_value='1') as send:
+   self.assertEqual(b.process_payment_message(self.c,address,CFG,'token',clock=1001),1)
+   self.assertEqual(b.get_payment_state(self.c,7),'awaiting_txid')
+   self.assertIn('paste the 64-character TXID',send.call_args.args[2])
  def test_membership_bot_once_polls_once(self):
   with patch.object(b,'DB',':memory:'),patch.object(b,'poll_vip_join_requests',return_value=0) as poll:
    b.run_membership_bot(CFG,once=True)
