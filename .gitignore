@@ -9,6 +9,7 @@ CREDENTIALS.cmd
 *.sqlite-shm
 *.sqlite-wal
 *.log
+payment_bot.log
 charts/
 two_models/
 __pycache__/

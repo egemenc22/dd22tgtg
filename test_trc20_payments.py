@@ -1,4 +1,5 @@
 import sqlite3
+import socket
 import unittest
 from unittest.mock import patch
 
@@ -61,5 +62,11 @@ class PaymentTests(unittest.TestCase):
   with patch.object(b,'telegram_call',side_effect=replies) as call,patch.dict(b.os.environ,{'TELEGRAM_BOT_TOKEN':'token','TELEGRAM_VIP_CHAT_ID':'-1001'}):
    self.assertEqual(b.configure_membership_bot(CFG)['id'],99)
    self.assertEqual([x.args[1] for x in call.call_args_list],['getMe','setMyCommands','getChatMember'])
+ def test_single_instance_lock(self):
+  import payment_bot
+  first=payment_bot.single_instance_lock()
+  try:
+   with self.assertRaises(SystemExit):payment_bot.single_instance_lock()
+  finally:first.close()
 
 if __name__=='__main__':unittest.main()

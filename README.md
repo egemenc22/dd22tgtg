@@ -9,6 +9,13 @@ Windows tabanlı Telegram kripto sinyal, VIP üyelik ve USDT-TRC20 ödeme botu.
    yerel ve Git tarafından yok sayılan `CREDENTIALS.cmd` dosyasına yazılır.
 3. Sinyal tarayıcı için `START.bat`, VIP ödeme/üyelik için
    `START_PAYMENT_BOT.bat` çalıştırın.
+4. Bir kez `INSTALL_AUTOSTART.bat` çalıştırın. Ödeme botu Windows oturumu
+   açıldığında otomatik başlar ve beklenmedik şekilde kapanırsa yeniden açılır.
+
+Otomatik botun çıktısı `payment_bot.log` dosyasına yazılır. Aynı anda ikinci
+ödeme botu çalıştırılamaz. Otomatik başlatmayı kaldırmak için
+`REMOVE_AUTOSTART.bat` kullanılır. Bilgisayar kapalı veya internetsizken ödeme
+işlenemez; gerçek 7/24 kullanım için bot bir sunucuda çalıştırılmalıdır.
 
 Tokenı GitHub dosyalarına, issue'lara veya sohbetlere yazmayın.
 

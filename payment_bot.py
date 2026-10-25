@@ -2,11 +2,21 @@
 import argparse
 import json
 import logging
+import socket
 from pathlib import Path
 
 import signal_bot
 
 ROOT = Path(__file__).resolve().parent
+LOCK_PORT = 18787
+
+
+def single_instance_lock():
+    lock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    try:lock.bind(('127.0.0.1',LOCK_PORT))
+    except OSError as exc:raise SystemExit('EGONIA payment bot is already running.') from exc
+    lock.listen(1)
+    return lock
 
 
 def configuration():
@@ -31,6 +41,7 @@ def main():
     parser.add_argument('--once', action='store_true')
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+    lock=single_instance_lock()
     cfg=configuration()
     signal_bot.configure_membership_bot(cfg)
     signal_bot.run_membership_bot(cfg, once=args.once)
