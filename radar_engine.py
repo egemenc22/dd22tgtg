@@ -100,7 +100,8 @@ def message(row):
     up=row['direction']=='UP'
     label='🟢 BUY' if up else '🔴 SELL'
     pair=_pair(row['symbol'])
-    kind=('Extra Trees SHORT · 12h / -3%' if row['kind']=='ML_EXTRA_TREES_SHORT' else 'Random Forest LONG · 12h / +3%' if row['kind']=='ML_RANDOM_FOREST_LONG' else row['kind'].replace('_',' ').title().replace('Pump Dump','Pump / Dump'))
+    horizon=str(e.get('ml_horizon','2h'));target=float(e.get('ml_target_pct',1.2))
+    kind=(f"Extra Trees SHORT · {horizon} / -{target:g}%" if row['kind']=='ML_EXTRA_TREES_SHORT' else f"Random Forest LONG · {horizon} / +{target:g}%" if row['kind']=='ML_RANDOM_FOREST_LONG' else row['kind'].replace('_',' ').title().replace('Pump Dump','Pump / Dump'))
     quote=pair.split('/')[-1] if '/' in pair else ''
     base=pair.split('/')[0]
     hashtags=' '.join('#'+''.join(c for c in token if c.isalnum()) for token in (base,quote) if token)
@@ -116,6 +117,7 @@ def message(row):
 
 def channel_message(row,channel,cfg):
     text=message(row)
+    event=json.loads(row['details'])
     if channel=='telegram_free':
         username=str(cfg.get('telegram_sales_bot_username','EgoniaSignalsBot')).strip().lstrip('@')
         price=str(cfg.get('subscription_price_usdt','9.90'))
@@ -123,6 +125,18 @@ def channel_message(row,channel,cfg):
         text+=(f"\n\n🔐 Unlock EGONIA VIP — {price} USDT / {days} days"
               f"\nFull entry, target and stop alerts."
               f"\n👉 https://t.me/{username}?start=vip")
+    elif channel=='telegram_vip' and row['kind'] in ('ML_EXTRA_TREES_SHORT','ML_RANDOM_FOREST_LONG'):
+        entry=float(event['price']);target_pct=float(event.get('ml_target_pct',1.2));stop_pct=float(event.get('ml_stop_pct',.7))
+        long=row['direction']=='UP'
+        target=entry*(1+target_pct/100 if long else 1-target_pct/100)
+        stop=entry*(1-stop_pct/100 if long else 1+stop_pct/100)
+        text+=(f"\n\n🎯 VIP SCALP LEVELS"
+              f"\nEntry reference: {_price_text(entry)}"
+              f"\nTarget: {_price_text(target)} (+{target_pct:g}% objective)"
+              f"\nStop: {_price_text(stop)} ({stop_pct:g}% risk)"
+              f"\nHorizon: {event.get('ml_horizon','2h')}"
+              f"\nModel probability: {float(event.get('ml_probability',row['score']/100))*100:.1f}%"
+              f"\nResearch signal; manage leverage and execution risk.")
     return text
 
 def publish(con,cfg,send,clock=None):

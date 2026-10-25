@@ -83,6 +83,27 @@ def raw_rows(rows,limits,per_split,seed=42):
         latest=(int(ts[now]),channels[np.arange(now-WINDOW+1,now+1)].reshape(-1))
     return results,latest
 
+def barrier_outcomes(rows,dates,horizon_bars=24,target_pct=.012,stop_pct=.007):
+    """Conservative first-touch scalp labels; ambiguous same-bar hits are losses."""
+    a=np.asarray(rows,dtype='float64');ts=a[:,0].astype('int64');o=a[:,1];h=a[:,2];l=a[:,3]
+    positions={int(value):i for i,value in enumerate(ts)}
+    long=[];short=[]
+    for date in dates:
+        i=positions[int(date)];entry=float(o[i+1]);end=min(len(a),i+1+int(horizon_bars))
+        long_result=0.;short_result=0.;long_open=True;short_open=True
+        for j in range(i+1,end):
+            if long_open:
+                stop_hit=l[j]<=entry*(1-stop_pct);target_hit=h[j]>=entry*(1+target_pct)
+                if stop_hit:long_open=False
+                elif target_hit:long_result=1.;long_open=False
+            if short_open:
+                stop_hit=h[j]>=entry*(1+stop_pct);target_hit=l[j]<=entry*(1-target_pct)
+                if stop_hit:short_open=False
+                elif target_hit:short_result=1.;short_open=False
+            if not long_open and not short_open:break
+        long.append(long_result);short.append(short_result)
+    return np.asarray(long,dtype='float32'),np.asarray(short,dtype='float32')
+
 
 def make_model(name,seed=42):
     typ,param=name.split(':',1)

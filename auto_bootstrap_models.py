@@ -44,7 +44,7 @@ def main():
     con.commit();con.close()
     print('Candle history loaded for',ok,'coin pairs',flush=True)
     if ok<12:print('Not enough trading history to initialize models.',flush=True);return 1
-    cmd=[sys.executable,str(ROOT/'train_two_models.py'),'--db',str(DB),'--samples-per-market','40']
+    cmd=[sys.executable,str(ROOT/'train_two_models.py'),'--db',str(DB),'--samples-per-market','120']
     result=subprocess.run(cmd,cwd=ROOT)
     if result.returncode: return result.returncode
     if not two_model_engine.ready():return 1

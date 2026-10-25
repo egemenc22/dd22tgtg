@@ -2,6 +2,11 @@
 
 Windows tabanlı Telegram kripto sinyal, VIP üyelik ve USDT-TRC20 ödeme botu.
 
+`config.json` gerçek Telegram yayını için açıktır. Model ürünü 5 dakikalık
+mumlardan 2 saatlik LONG/SHORT scalp tahmini üretir; hedef %1,2, stop %0,7,
+FREE kota 2/gün ve VIP kota 6/gündür. İlk başlangıçta eski 12 saatlik modeller
+otomatik geçersiz sayılır ve yeni scalp modelleri eğitilir.
+
 ## Windows kurulumu
 
 1. Depoyu ZIP olarak indirin ve klasöre çıkarın.

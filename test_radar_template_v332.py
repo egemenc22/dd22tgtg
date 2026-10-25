@@ -3,7 +3,7 @@ from radar_engine import channel_message,message
 
 class RadarTemplateTest(unittest.TestCase):
     def make(self, direction='UP', kind='BREAKOUT', price=0.02633):
-        return {'symbol':'BMTUSDT','exchange':'Binance','kind':kind,'direction':direction,'details':json.dumps({'score':95,'price':price,'move_pct':3.8,'volume_ratio':4.2,'quote_volume':89123,'kinds':[kind]})}
+        return {'symbol':'BMTUSDT','exchange':'Binance','kind':kind,'direction':direction,'score':95,'details':json.dumps({'score':95,'price':price,'move_pct':3.8,'volume_ratio':4.2,'quote_volume':89123,'kinds':[kind]})}
     def test_buy(self):
         msg=message(self.make())
         self.assertIn('⚡ ALTCOIN RADAR\n\n🟢 BUY BMT/USDT',msg)
@@ -32,5 +32,10 @@ class RadarTemplateTest(unittest.TestCase):
         self.assertIn('9.90 USDT / 30 days',text)
         self.assertIn('https://t.me/EgoniaSignalsBot?start=vip',text)
         self.assertNotIn('Unlock EGONIA VIP',channel_message(self.make(),'telegram_vip',cfg))
+    def test_vip_scalp_levels(self):
+        row=self.make('UP','ML_RANDOM_FOREST_LONG',100)
+        row['details']=json.dumps({'score':82,'price':100,'move_pct':.3,'volume_ratio':2,'ml_horizon':'2h','ml_target_pct':1.2,'ml_stop_pct':.7,'ml_probability':.82})
+        text=channel_message(row,'telegram_vip',{})
+        self.assertIn('VIP SCALP LEVELS',text);self.assertIn('$101.2',text);self.assertIn('$99.3',text)
 
 if __name__=='__main__':unittest.main()

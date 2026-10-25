@@ -4,9 +4,13 @@ import json,time,logging,math,threading
 _load_lock=threading.RLock()
 MODELS=Path(__file__).resolve().parent/'two_models'
 _cache={}
+PRODUCT_VERSION='scalp_2h_v1'
 
 def ready():
-    return all((MODELS/(k+'.joblib')).is_file() for k in ('short_extra','long_forest')) and (MODELS/'calibration.json').is_file()
+    if not all((MODELS/(k+'.joblib')).is_file() for k in ('short_extra','long_forest')) or not (MODELS/'calibration.json').is_file():return False
+    try:c=json.loads((MODELS/'calibration.json').read_text(encoding='utf-8'))
+    except (OSError,ValueError):return False
+    return all(c.get(k,{}).get('product_version')==PRODUCT_VERSION for k in ('short_extra','long_forest'))
 
 def features(rows):
     import numpy as np
@@ -44,7 +48,7 @@ def analyze(rows, cfg=None):
                 model=joblib.load(MODELS/(side+'.joblib'))
                 if hasattr(model,'n_jobs'):model.n_jobs=1
                 _cache[side]=(model,c[side])
-    threshold=float(cfg.get('ml_probability_threshold',0.6))
+    threshold=float(cfg.get('ml_probability_threshold',0.65))
     matched=[]
     for name,dir_ in [('short_extra','DOWN'),('long_forest','UP')]:
         model,cal=_cache[name]
@@ -61,4 +65,4 @@ def analyze(rows, cfg=None):
     return dict(kind='ML_EXTRA_TREES_SHORT' if direction=='DOWN' else 'ML_RANDOM_FOREST_LONG',
                 direction=direction,score=round(prob*100),move_pct=100*(float(last['close'])/float(rows[-2]['close'])-1),
                 quote_volume=float(last.get('quote_volume',0)),volume_ratio=round(float(last.get('quote_volume',0))/max(1.0,sum(float(t.get('quote_volume',0)) for t in rows[-25:-1])/24),2),price=float(last['close']),origin_ts=int(last['time']),
-                ml_probability=round(prob,4),ml_model=name,ml_horizon='12h',ml_target_pct=3.0)
+                ml_probability=round(prob,4),ml_model=name,ml_horizon='2h',ml_target_pct=1.2,ml_stop_pct=.7)

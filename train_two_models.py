@@ -3,7 +3,13 @@ import argparse,sqlite3,json,os
 from pathlib import Path
 import numpy as np
 import joblib
-from candle_discovery_v5 import raw_rows,make_model,cal_bin,cal_predict,report_at, BAR_MS
+from candle_discovery_v5 import raw_rows,barrier_outcomes,make_model,cal_bin,cal_predict,report_at, BAR_MS
+
+PRODUCT_VERSION='scalp_2h_v1'
+HORIZON='2h'
+TARGET_PCT=.012
+STOP_PCT=.007
+PROBABILITY_THRESHOLD=.65
 
 p=argparse.ArgumentParser()
 p.add_argument('--db',required=True);p.add_argument('--limit-markets',type=int,default=0);p.add_argument('--samples-per-market',type=int,default=120)
@@ -22,9 +28,10 @@ xs=[[],[],[]];ys={k:[[],[],[]] for k in ('short_extra','long_forest')};names=[[]
 for i,(ex,sym) in enumerate(markets,1):
     candles=con.execute("SELECT open_ms,open,high,low,close,volume FROM candles WHERE exchange=? AND symbol=? AND interval='5m' ORDER BY open_ms",(ex,sym)).fetchall()
     groups,_=raw_rows(candles,bounds,a.samples_per_market)
-    for part,_,x,targets in groups:
+    for part,dates,x,targets in groups:
         xs[part].append(x)
-        ys['short_extra'][part].append(targets['12h'][:,1]);ys['long_forest'][part].append(targets['12h'][:,0])
+        long_result,short_result=barrier_outcomes(candles,dates,24,TARGET_PCT,STOP_PCT)
+        ys['short_extra'][part].append(short_result);ys['long_forest'][part].append(long_result)
         names[part].extend([ex+':'+sym]*len(x))
     if i%20==0:print('Prepared',i,'/',len(markets),flush=True)
 con.close()
@@ -39,11 +46,13 @@ for name,kind in [('short_extra','extra:8'),('long_forest','forest:8')]:
     model.fit(xs[0],np.log1p(y[0]))
     pv=np.clip(np.expm1(model.predict(xs[1])),0,3)
     pt=np.clip(np.expm1(model.predict(xs[2])),0,3)
-    edges,bins=cal_bin(pv,y[1],.03)
+    edges,bins=cal_bin(pv,y[1],.5)
     probs=cal_predict(pt,edges,bins)
-    threshold=.60
-    report[name]={'model':kind,'train':len(y[0]),'validation':len(y[1]),'test':len(y[2]),'threshold':threshold,
-                  'holdout':report_at(probs,y[2],.03,threshold,names[2]),'edges':edges.tolist(),'bins':bins.tolist()}
+    holdout=report_at(probs,y[2],.5,PROBABILITY_THRESHOLD,names[2])
+    approved=bool(holdout['signals']>=30 and holdout['market_breadth']>=5 and (holdout['precision_pct'] or 0)>=55)
+    report[name]={'product_version':PRODUCT_VERSION,'model':kind,'train':len(y[0]),'validation':len(y[1]),'test':len(y[2]),'threshold':PROBABILITY_THRESHOLD,
+                  'horizon':HORIZON,'target_pct':TARGET_PCT*100,'stop_pct':STOP_PCT*100,
+                  'holdout':holdout,'approved_for_live':approved,'edges':edges.tolist(),'bins':bins.tolist()}
     joblib.dump(model,out/(name+'.joblib'))
 (out/'calibration.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
 print('TWO MODELS TRAINED. Holdout report:',json.dumps({k:v['holdout'] for k,v in report.items()},indent=2),flush=True)

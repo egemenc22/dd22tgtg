@@ -14,7 +14,9 @@ LOCK_PORT = 18787
 def single_instance_lock():
     lock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     try:lock.bind(('127.0.0.1',LOCK_PORT))
-    except OSError as exc:raise SystemExit('EGONIA payment bot is already running.') from exc
+    except OSError as exc:
+        lock.close()
+        raise SystemExit('EGONIA payment bot is already running.') from exc
     lock.listen(1)
     return lock
 
