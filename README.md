@@ -14,10 +14,11 @@ otomatik geçersiz sayılır ve yeni scalp modelleri eğitilir.
    yerel ve Git tarafından yok sayılan `CREDENTIALS.cmd` dosyasına yazılır.
 3. Sinyal tarayıcı için `START.bat`, VIP ödeme/üyelik için
    `START_PAYMENT_BOT.bat` çalıştırın.
-4. Bir kez `INSTALL_AUTOSTART.bat` çalıştırın. Ödeme botu Windows oturumu
-   açıldığında otomatik başlar ve beklenmedik şekilde kapanırsa yeniden açılır.
+4. Bir kez `INSTALL_AUTOSTART.bat` çalıştırın. Ödeme botu ve gerçek sinyal
+   tarayıcısı Windows oturumu açıldığında otomatik başlar; beklenmedik şekilde
+   kapanırlarsa yeniden açılırlar.
 
-Otomatik botun çıktısı `payment_bot.log` dosyasına yazılır. Aynı anda ikinci
+Çıktılar `payment_bot.log` ve `scanner.log` dosyalarına yazılır. Aynı anda ikinci
 ödeme botu çalıştırılamaz. Otomatik başlatmayı kaldırmak için
 `REMOVE_AUTOSTART.bat` kullanılır. Bilgisayar kapalı veya internetsizken ödeme
 işlenemez; gerçek 7/24 kullanım için bot bir sunucuda çalıştırılmalıdır.
