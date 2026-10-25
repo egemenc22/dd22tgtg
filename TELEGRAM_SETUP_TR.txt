@@ -1,0 +1,16 @@
+EGONIA v2.9.2 - TELEGRAM FREE BAGLANTISI
+
+1. SETUP_TELEGRAM.bat dosyasina cift tikla.
+2. BotFather'dan aldigin tam API tokenini yapistir ve Enter'a bas.
+   Not: Sifre girisi ekranda gozukmez; bu normal.
+3. Program tokeni yalnizca bilgisayarindaki CREDENTIALS.cmd dosyasina kaydeder.
+4. Ardindan Telegram hesap ve kanal yetki kontrolu otomatik baslar.
+5. Telegram sonucu ok=true, channels.telegram_free.ok=true olmali.
+6. Bu surumde dry_run=true; otomatik GERCEK kanal yayini kapali.
+7. Tokeni kimseye gonderme veya CREDENTIALS.cmd dosyasini ZIP'e ekleyip paylasma.
+8. VIP ve X baglantilari simdilik kapali.
+
+FREE kanal: https://t.me/EgoniaSignalsFree
+Bot: @EgoniaSignalsBot
+
+Eski veri tabanini tasimak istiyorsan bot kapaliyken signal_service.sqlite dosyasini kopyala.

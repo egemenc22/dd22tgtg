@@ -1,0 +1,23 @@
+# Credentials and local environment
+CREDENTIALS.cmd
+.env
+.env.*
+!.env.example
+
+# Runtime state and generated artifacts
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.log
+charts/
+two_models/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

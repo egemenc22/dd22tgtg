@@ -1,0 +1,189 @@
+{
+  "source": "candle_discovery_report.json v5.0.0",
+  "meaning": "Historical target-touch classification only; NOT trade win-rate; NOT wired to live signal logic",
+  "models_not_included": true,
+  "top_historical_target_touch": [
+    {
+      "horizon": "12h",
+      "direction": "SHORT",
+      "target_pct": 3.0,
+      "model": "extra:8",
+      "historical_test": {
+        "signals": 2108,
+        "hits": 1865,
+        "precision_pct": 88.472,
+        "base_rate_pct": 48.919,
+        "market_breadth": 85
+      }
+    },
+    {
+      "horizon": "12h",
+      "direction": "LONG",
+      "target_pct": 3.0,
+      "model": "forest:8",
+      "historical_test": {
+        "signals": 2187,
+        "hits": 1811,
+        "precision_pct": 82.807,
+        "base_rate_pct": 45.664,
+        "market_breadth": 84
+      }
+    },
+    {
+      "horizon": "12h",
+      "direction": "SHORT",
+      "target_pct": 5.0,
+      "model": "extra:8",
+      "historical_test": {
+        "signals": 2108,
+        "hits": 1667,
+        "precision_pct": 79.08,
+        "base_rate_pct": 31.208,
+        "market_breadth": 85
+      }
+    },
+    {
+      "horizon": "12h",
+      "direction": "LONG",
+      "target_pct": 5.0,
+      "model": "forest:8",
+      "historical_test": {
+        "signals": 2187,
+        "hits": 1620,
+        "precision_pct": 74.074,
+        "base_rate_pct": 29.74,
+        "market_breadth": 84
+      }
+    },
+    {
+      "horizon": "2h",
+      "direction": "SHORT",
+      "target_pct": 3.0,
+      "model": "extra:8",
+      "historical_test": {
+        "signals": 2120,
+        "hits": 1417,
+        "precision_pct": 66.84,
+        "base_rate_pct": 16.806,
+        "market_breadth": 92
+      }
+    },
+    {
+      "horizon": "2h",
+      "direction": "LONG",
+      "target_pct": 3.0,
+      "model": "extra:8",
+      "historical_test": {
+        "signals": 2093,
+        "hits": 1344,
+        "precision_pct": 64.214,
+        "base_rate_pct": 17.47,
+        "market_breadth": 81
+      }
+    },
+    {
+      "horizon": "12h",
+      "direction": "SHORT",
+      "target_pct": 10.0,
+      "model": "extra:8",
+      "historical_test": {
+        "signals": 2108,
+        "hits": 1230,
+        "precision_pct": 58.349,
+        "base_rate_pct": 12.434,
+        "market_breadth": 85
+      }
+    },
+    {
+      "horizon": "12h",
+      "direction": "LONG",
+      "target_pct": 10.0,
+      "model": "forest:8",
+      "historical_test": {
+        "signals": 2187,
+        "hits": 1202,
+        "precision_pct": 54.961,
+        "base_rate_pct": 14.752,
+        "market_breadth": 84
+      }
+    },
+    {
+      "horizon": "2h",
+      "direction": "SHORT",
+      "target_pct": 5.0,
+      "model": "extra:8",
+      "historical_test": {
+        "signals": 2120,
+        "hits": 1039,
+        "precision_pct": 49.009,
+        "base_rate_pct": 8.871,
+        "market_breadth": 92
+      }
+    },
+    {
+      "horizon": "2h",
+      "direction": "LONG",
+      "target_pct": 5.0,
+      "model": "extra:8",
+      "historical_test": {
+        "signals": 2093,
+        "hits": 1015,
+        "precision_pct": 48.495,
+        "base_rate_pct": 9.831,
+        "market_breadth": 81
+      }
+    },
+    {
+      "horizon": "30m",
+      "direction": "SHORT",
+      "target_pct": 3.0,
+      "model": "extra:14",
+      "historical_test": {
+        "signals": 2117,
+        "hits": 899,
+        "precision_pct": 42.466,
+        "base_rate_pct": 7.234,
+        "market_breadth": 86
+      }
+    },
+    {
+      "horizon": "12h",
+      "direction": "LONG",
+      "target_pct": 15.0,
+      "model": "forest:8",
+      "historical_test": {
+        "signals": 2187,
+        "hits": 912,
+        "precision_pct": 41.701,
+        "base_rate_pct": 9.783,
+        "market_breadth": 84
+      }
+    },
+    {
+      "horizon": "12h",
+      "direction": "SHORT",
+      "target_pct": 15.0,
+      "model": "extra:8",
+      "historical_test": {
+        "signals": 2108,
+        "hits": 872,
+        "precision_pct": 41.366,
+        "base_rate_pct": 6.872,
+        "market_breadth": 85
+      }
+    },
+    {
+      "horizon": "30m",
+      "direction": "LONG",
+      "target_pct": 3.0,
+      "model": "extra:14",
+      "historical_test": {
+        "signals": 2078,
+        "hits": 844,
+        "precision_pct": 40.616,
+        "base_rate_pct": 6.806,
+        "market_breadth": 89
+      }
+    }
+  ]
+}
