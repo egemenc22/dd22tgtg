@@ -24,9 +24,10 @@ tokenıyla başka `getUpdates` süreci veya webhook çalıştırmayın.
    gönderilecek alıcı adresi değil, müşterinin Trust Wallet TRON adresidir.
 2. Botun verdiği alıcı adrese TRON ağından tam 9,90 resmî USDT gönderilir.
    Ağ ücreti TRX olarak ayrıca ödenir.
-3. Müşteri `/odeme 64_KARAKTER_TXID` yazar.
-4. Onaylanmış transfer doğrulanınca 30 gün eklenir. `/davet` özel VIP katılım
-   bağlantısı üretir; katılım isteği yalnızca aktif üyeye onaylanır.
+3. Müşteri `/payment 64_CHARACTER_TXID` yazar.
+4. Onaylanmış transfer doğrulanınca 30 gün eklenir ve özel VIP katılım
+   bağlantısı otomatik gönderilir. `/invite` bağlantıyı tekrar almak içindir;
+   katılım isteği yalnızca aktif üyeye onaylanır.
 
 Borsadan çekimde zincirdeki gönderici adresi müşterinin adresinden farklı
 olabilir. İlk sürümde otomatik ödeme için Trust Wallet gibi müşterinin kontrol

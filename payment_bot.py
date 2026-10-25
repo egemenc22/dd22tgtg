@@ -31,7 +31,9 @@ def main():
     parser.add_argument('--once', action='store_true')
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-    signal_bot.run_membership_bot(configuration(), once=args.once)
+    cfg=configuration()
+    signal_bot.configure_membership_bot(cfg)
+    signal_bot.run_membership_bot(cfg, once=args.once)
 
 
 if __name__ == '__main__':

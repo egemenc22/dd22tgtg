@@ -49,5 +49,17 @@ class PaymentTests(unittest.TestCase):
   with patch.object(b,'DB',':memory:'),patch.object(b,'poll_vip_join_requests',return_value=0) as poll:
    b.run_membership_bot(CFG,once=True)
    poll.assert_called_once()
+ def test_payment_automatically_returns_invite(self):
+  p.create_order(self.c,7,'alice',SENDER,CFG,clock=1000)
+  event={'message':{'chat':{'id':7,'type':'private'},'from':{'id':7,'username':'alice'},'text':'/payment '+'a'*64}}
+  with patch.object(p,'fetch_confirmed_tx',return_value=fixture()),patch.object(b,'telegram_call',return_value={'invite_link':'https://t.me/+private'}),patch.object(b,'telegram_send',return_value='1') as send,patch.dict(b.os.environ,{'TELEGRAM_VIP_CHAT_ID':'-1001'}):
+   self.assertEqual(b.process_payment_message(self.c,event,CFG,'token',clock=1010),1)
+   self.assertIn('Payment confirmed',send.call_args.args[2])
+   self.assertIn('https://t.me/+private',send.call_args.args[2])
+ def test_startup_registers_commands_and_checks_admin(self):
+  replies=[{'id':99,'username':'EgoniaSignalsBot'},True,{'status':'administrator','can_invite_users':True,'can_restrict_members':True}]
+  with patch.object(b,'telegram_call',side_effect=replies) as call,patch.dict(b.os.environ,{'TELEGRAM_BOT_TOKEN':'token','TELEGRAM_VIP_CHAT_ID':'-1001'}):
+   self.assertEqual(b.configure_membership_bot(CFG)['id'],99)
+   self.assertEqual([x.args[1] for x in call.call_args_list],['getMe','setMyCommands','getChatMember'])
 
 if __name__=='__main__':unittest.main()

@@ -33,6 +33,7 @@
   "enable_vip_member_enforcement": false,
   "vip_invite_expire_hours": 24,
   "vip_sales_url": "",
+  "telegram_sales_bot_username": "EgoniaSignalsBot",
   "vip_join_request_mode": true,
   "strategy_mode": false,
   "strategy_timeframes": [

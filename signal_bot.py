@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS observed_markets (exchange TEXT NOT NULL, symbol TEXT
 CREATE TABLE IF NOT EXISTS members (user_id INTEGER PRIMARY KEY, username TEXT, expires_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'active', updated_at INTEGER NOT NULL, invite_link TEXT, last_error TEXT);
 CREATE TABLE IF NOT EXISTS sales_events (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, event TEXT NOT NULL, created_at INTEGER NOT NULL, note TEXT);
 '''
-DEFAULT={'dry_run':True,'enable_x':False,'enable_telegram':False,'enable_telegram_free':False,'enable_telegram_vip':False,'free_open_per_day':2,'enable_vip_member_enforcement':False,'vip_invite_expire_hours':24,'vip_invite_max_uses':1,'vip_join_request_mode':True,'vip_sales_url':'','enable_trc20_payments':False,'subscription_price_usdt':'9.90','subscription_days':30,'payment_order_expiry_minutes':120,'trc20_recipient_address':'','min_volume_usdt':100000,'min_volume_ratio':4.0,'min_move_pct':0.8,'max_move_pct':8.0,'max_signals_per_day':18,'cooldown_hours':2,'target_pct':5.0,'stop_pct':2.5,'horizon_minutes':240,'roundtrip_cost_pct':0.4,'poll_seconds':60,'max_spread_pct':0.2,'allow_unvalidated_publication':False,'exchanges':['Binance','MEXC','Gate'],'strategy_mode':True,'strategy_timeframes':['5m','15m','1h'],'strategy_names':['EMA_TREND','DONCHIAN_20','BB_SQUEEZE','RSI_BB_REVERSION','ATR_CHANNEL','MACD_MOMENTUM','VOLUME_BREAKOUT','VOLUME_ACCELERATION','MOMENTUM_IGNITION'],'enable_result_tracking':False,'enable_charts':True,'chart_timeframe':'auto','panel_port':8787,'auto_discovery':True,'min_daily_quote_volume_usdt':1000000,'max_pairs_per_exchange':60,'markets_per_cycle':12,'discovery_refresh_seconds':3600,'altcoin_focus':False,'max_daily_quote_volume_usdt':150000000,'symbols':['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','DOGEUSDT','SUIUSDT','PEPEUSDT','BNBUSDT','ADAUSDT','AVAXUSDT']}
+DEFAULT={'dry_run':True,'enable_x':False,'enable_telegram':False,'enable_telegram_free':False,'enable_telegram_vip':False,'free_open_per_day':2,'enable_vip_member_enforcement':False,'vip_invite_expire_hours':24,'vip_invite_max_uses':1,'vip_join_request_mode':True,'vip_sales_url':'','telegram_sales_bot_username':'EgoniaSignalsBot','enable_trc20_payments':False,'subscription_price_usdt':'9.90','subscription_days':30,'payment_order_expiry_minutes':120,'trc20_recipient_address':'','min_volume_usdt':100000,'min_volume_ratio':4.0,'min_move_pct':0.8,'max_move_pct':8.0,'max_signals_per_day':18,'cooldown_hours':2,'target_pct':5.0,'stop_pct':2.5,'horizon_minutes':240,'roundtrip_cost_pct':0.4,'poll_seconds':60,'max_spread_pct':0.2,'allow_unvalidated_publication':False,'exchanges':['Binance','MEXC','Gate'],'strategy_mode':True,'strategy_timeframes':['5m','15m','1h'],'strategy_names':['EMA_TREND','DONCHIAN_20','BB_SQUEEZE','RSI_BB_REVERSION','ATR_CHANNEL','MACD_MOMENTUM','VOLUME_BREAKOUT','VOLUME_ACCELERATION','MOMENTUM_IGNITION'],'enable_result_tracking':False,'enable_charts':True,'chart_timeframe':'auto','panel_port':8787,'auto_discovery':True,'min_daily_quote_volume_usdt':1000000,'max_pairs_per_exchange':60,'markets_per_cycle':12,'discovery_refresh_seconds':3600,'altcoin_focus':False,'max_daily_quote_volume_usdt':150000000,'symbols':['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','DOGEUSDT','SUIUSDT','PEPEUSDT','BNBUSDT','ADAUSDT','AVAXUSDT']}
 
 def now(): return int(time.time())
 def utc(t):return datetime.fromtimestamp(t,timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
@@ -192,16 +192,14 @@ def process_payment_message(con,event,cfg,token,clock=None):
         parts=text.split()
         if len(parts)!=2:raise ValueError('Usage: /payment 64_CHARACTER_TXID')
         expiry=payment_service.claim_order(con,uid,parts[1],cfg,clock=stamp)
-        telegram_send(token,uid,f"Payment confirmed. Your VIP membership is active until {utc(expiry)}. Send /invite to receive your private join link.")
+        try:link=ensure_vip_invite(con,uid,cfg,token,stamp)
+        except Exception as exc:
+            logging.warning('Payment confirmed but invite creation failed for %s: %s',uid,exc)
+            telegram_send(token,uid,f"Payment confirmed. Your VIP membership is active until {utc(expiry)}. Send /invite to retry your private join link.")
+        else:
+            telegram_send(token,uid,f"✅ Payment confirmed\nVIP active until: {utc(expiry)}\n\nYour private VIP join link:\n{link}")
     elif text.startswith(('/davet','/invite')):
-        member=con.execute("SELECT * FROM members WHERE user_id=? AND status='active' AND expires_at>?",(uid,stamp)).fetchone()
-        if not member:raise ValueError('No active VIP membership was found')
-        vip=os.getenv('TELEGRAM_VIP_CHAT_ID','')
-        if not vip:raise RuntimeError('VIP chat is not configured')
-        link=member['invite_link']
-        if not link:
-            link=telegram_call(token,'createChatInviteLink',{'chat_id':vip,'name':f'VIP-{uid}','expire_date':stamp+max(1,int(cfg.get('vip_invite_expire_hours',24)))*3600,'creates_join_request':'true'})['invite_link']
-            con.execute('UPDATE members SET invite_link=?,updated_at=? WHERE user_id=?',(link,stamp,uid));con.commit()
+        link=ensure_vip_invite(con,uid,cfg,token,stamp)
         telegram_send(token,uid,'Your private VIP join link: '+link)
     else:return 0
     return 1
@@ -243,6 +241,42 @@ def run_membership_bot(cfg,once=False):
 def telegram_send(token,chat_id,msg):
     return str(telegram_call(token,'sendMessage',{'chat_id':chat_id,'text':msg,'disable_web_page_preview':'true'})['message_id'])
 
+def vip_sales_cta(cfg):
+    username=str(cfg.get('telegram_sales_bot_username','EgoniaSignalsBot')).strip().lstrip('@')
+    price=str(cfg.get('subscription_price_usdt','9.90'))
+    days=int(cfg.get('subscription_days',30))
+    return (f"🔐 Unlock EGONIA VIP — {price} USDT / {days} days\n"
+            f"Full entry, target and stop alerts.\n"
+            f"👉 https://t.me/{username}?start=vip")
+
+def ensure_vip_invite(con,uid,cfg,token,stamp):
+    member=con.execute("SELECT * FROM members WHERE user_id=? AND status='active' AND expires_at>?",(uid,stamp)).fetchone()
+    if not member:raise ValueError('No active VIP membership was found')
+    vip=os.getenv('TELEGRAM_VIP_CHAT_ID','')
+    if not vip:raise RuntimeError('VIP chat is not configured')
+    link=member['invite_link']
+    if not link:
+        link=telegram_call(token,'createChatInviteLink',{'chat_id':vip,'name':f'VIP-{uid}','expire_date':stamp+max(1,int(cfg.get('vip_invite_expire_hours',24)))*3600,'creates_join_request':'true'})['invite_link']
+        con.execute('UPDATE members SET invite_link=?,updated_at=? WHERE user_id=?',(link,stamp,uid));con.commit()
+    return link
+
+def configure_membership_bot(cfg):
+    token=os.getenv('TELEGRAM_BOT_TOKEN','');vip=os.getenv('TELEGRAM_VIP_CHAT_ID','')
+    if not token or not vip:raise RuntimeError('Missing Telegram bot token / VIP chat')
+    bot=telegram_call(token,'getMe',{})
+    commands=[{'command':'start','description':'View VIP subscription details'},
+              {'command':'subscribe','description':'Create a 9.90 USDT payment order'},
+              {'command':'payment','description':'Verify your TRC20 payment TXID'},
+              {'command':'invite','description':'Get your active VIP join link'}]
+    telegram_call(token,'setMyCommands',{'commands':json.dumps(commands),'scope':json.dumps({'type':'all_private_chats'})})
+    membership=telegram_call(token,'getChatMember',{'chat_id':vip,'user_id':bot['id']})
+    creator=membership.get('status')=='creator'
+    capable=membership.get('status')=='administrator' and membership.get('can_invite_users') and membership.get('can_restrict_members')
+    if not (creator or capable):
+        raise RuntimeError('Bot needs VIP channel admin permissions to invite and remove members')
+    logging.info('Membership bot ready: @%s | VIP chat %s',bot.get('username','unknown'),vip)
+    return bot
+
 def x_auth_header(method,uri):
     credentials={k:os.getenv(k,'') for k in ('X_API_KEY','X_API_SECRET','X_ACCESS_TOKEN','X_ACCESS_TOKEN_SECRET')}
     if not all(credentials.values()):raise RuntimeError('Missing X API credentials')
@@ -272,8 +306,7 @@ def commercial_msg(s,kind,channel,cfg):
                   f"Public alert: unusual trading activity. Detailed entry/target/stop: VIP.")
         else:
             text=f"FREE SIGNAL UPDATE #{s['id']} | {s['symbol']}: {s['exit_reason']} | net simulated: {s['net_pct']:+.2f}%" if s['net_pct'] is not None else f"FREE SIGNAL UPDATE #{s['id']} | {s['symbol']}: UNVERIFIED"
-        url=cfg.get('vip_sales_url','').strip()
-        if url:text+='\nVIP: '+url
+        text+='\n\n'+vip_sales_cta(cfg)
     elif channel=='telegram_vip':
         text=text.replace('PAPER SIGNAL', 'EGONIA VIP SIGNAL',1)
     elif channel=='x':

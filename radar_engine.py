@@ -114,6 +114,17 @@ def message(row):
             f"{hashtags}\n\n"
             f"{pair} — {row['exchange']} {kind}")
 
+def channel_message(row,channel,cfg):
+    text=message(row)
+    if channel=='telegram_free':
+        username=str(cfg.get('telegram_sales_bot_username','EgoniaSignalsBot')).strip().lstrip('@')
+        price=str(cfg.get('subscription_price_usdt','9.90'))
+        days=int(cfg.get('subscription_days',30))
+        text+=(f"\n\n🔐 Unlock EGONIA VIP — {price} USDT / {days} days"
+              f"\nFull entry, target and stop alerts."
+              f"\n👉 https://t.me/{username}?start=vip")
+    return text
+
 def publish(con,cfg,send,clock=None):
     with _publish_lock:
         return _publish_locked(con,cfg,send,clock)
@@ -133,11 +144,11 @@ def _publish_locked(con,cfg,send,clock=None):
         # Persist in-flight BEFORE network I/O; uncertain results are not automatically retried.
         live=not cfg.get('dry_run',True) and cfg.get('allow_unvalidated_publication',False)
         if not live:
-            logging.info('RADAR DRY RUN %s: %s',channel,message(job))
+            logging.info('RADAR DRY RUN %s: %s',channel,channel_message(job,channel,cfg))
             con.execute('UPDATE radar_delivery SET status=? WHERE id=?',('dry_run',job['job_id']));con.commit();continue
         con.execute('UPDATE radar_delivery SET status=? WHERE id=?',('in_flight',job['job_id']));con.commit()
         try:
-            ext=send(channel,message(job))
+            ext=send(channel,channel_message(job,channel,cfg))
             con.execute('UPDATE radar_delivery SET status=?,external_id=? WHERE id=?',('sent',str(ext),job['job_id']))
             logging.info('RADAR SENT %s %s %s',channel,job['symbol'],job['kind'])
         except Exception as exc:

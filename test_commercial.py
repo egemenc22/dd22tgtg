@@ -26,7 +26,7 @@ class CommercialTests(unittest.TestCase):
         free=b.commercial_msg(s,'open','telegram_free',self.cfg);vip=b.commercial_msg(s,'open','telegram_vip',self.cfg)
         self.assertNotIn('Entry reference:',free)
         self.assertIn('Entry reference:',vip)
-        self.assertIn('https://example.com/vip',free)
+        self.assertIn('https://t.me/EgoniaSignalsBot?start=vip',free)
     def test_membership_manual(self):
         args=SimpleNamespace(members_action='grant',user_id=1234,days=30,username='sample')
         b.members_command(args,self.cfg)

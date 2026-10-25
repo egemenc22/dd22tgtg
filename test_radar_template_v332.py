@@ -1,5 +1,5 @@
 import json, unittest
-from radar_engine import message
+from radar_engine import channel_message,message
 
 class RadarTemplateTest(unittest.TestCase):
     def make(self, direction='UP', kind='BREAKOUT', price=0.02633):
@@ -26,5 +26,11 @@ class RadarTemplateTest(unittest.TestCase):
         self.assertIn('$0.00000076',msg)
     def test_event_name(self):
         self.assertIn('Pump / Dump Reversal',message(self.make(kind='PUMP_DUMP_REVERSAL')))
+    def test_free_channel_vip_call_to_action(self):
+        cfg={'subscription_price_usdt':'9.90','subscription_days':30,'telegram_sales_bot_username':'EgoniaSignalsBot'}
+        text=channel_message(self.make(),'telegram_free',cfg)
+        self.assertIn('9.90 USDT / 30 days',text)
+        self.assertIn('https://t.me/EgoniaSignalsBot?start=vip',text)
+        self.assertNotIn('Unlock EGONIA VIP',channel_message(self.make(),'telegram_vip',cfg))
 
 if __name__=='__main__':unittest.main()
