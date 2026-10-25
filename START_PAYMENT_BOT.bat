@@ -12,6 +12,12 @@ if not defined TELEGRAM_BOT_TOKEN (
 )
 where py >nul 2>&1
 if %ERRORLEVEL% EQU 0 (set "PYCMD=py -3") else (set "PYCMD=python")
+%PYCMD% -c "import matplotlib, websocket, numpy, sklearn, joblib" >nul 2>&1
+if errorlevel 1 (
+  echo Gerekli Python paketleri kuruluyor...
+  %PYCMD% -m pip install -r requirements.txt
+  if errorlevel 1 (echo PAKET KURULUMU BASARISIZ & pause & exit /b 1)
+)
 echo EGONIA VIP odeme botu baslatiliyor...
 %PYCMD% payment_bot.py
 if errorlevel 1 echo HATA: Odeme botu durdu. Yukaridaki mesaji kontrol edin.
