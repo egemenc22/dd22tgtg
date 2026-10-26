@@ -7,23 +7,22 @@ _cache={}
 PRODUCT_VERSION='scalp_2h_v1'
 
 def decision_threshold(cal,cfg=None):
-    """Use the requested probability when attainable, otherwise the best
-    calibrated band, with a quality floor. This prevents a trained model from
-    becoming permanently silent because none of its calibration bins can
-    reach a fixed global cutoff.
+    """Use the requested probability when attainable, otherwise the model's
+    best calibrated band. A fixed cutoff must never make a valid trained model
+    permanently silent.
     """
     cfg=cfg or {}
     requested=float(cfg.get('ml_probability_threshold',0.65))
-    floor=float(cfg.get('ml_probability_floor',0.55))
     bins=[float(v) for v in cal.get('bins',[]) if math.isfinite(float(v))]
     attainable=max(bins) if bins else requested
-    return max(floor,min(requested,attainable))
+    return min(requested,attainable)
 
 def threshold_summary(cfg=None):
     if not ready():return {}
     try:c=json.loads((MODELS/'calibration.json').read_text(encoding='utf-8'))
     except (OSError,ValueError):return {}
-    return {name:round(decision_threshold(c.get(name,{}),cfg),4)
+    return {name:{'selected':round(decision_threshold(c.get(name,{}),cfg),4),
+                  'best_calibrated':round(max(c.get(name,{}).get('bins',[0])),4)}
             for name in ('short_extra','long_forest')}
 
 def ready():
@@ -54,7 +53,7 @@ def features(rows):
     channels=np.stack((lr,rng,body,upper,lower,normalized,dv),axis=1).astype('float32')
     return channels[-WINDOW:].reshape(1,-1)
 
-def analyze(rows, cfg=None):
+def analyze(rows, cfg=None, diagnostics=None):
     if not ready():return None
     import joblib, numpy as np
     from candle_discovery_v5 import cal_predict
@@ -73,11 +72,16 @@ def analyze(rows, cfg=None):
         model,cal=_cache[name]
         raw=float(np.clip(np.expm1(model.predict(x)[0]),0,3))
         prob=float(cal_predict(np.array([raw]),np.array(cal['edges']),np.array(cal['bins']))[0])
+        if diagnostics is not None:
+            diagnostics['ml_'+name+'_prob']=round(prob,4)
         if prob>=decision_threshold(cal,cfg):matched.append((prob,name,dir_))
-    if not matched:return None
+    if not matched:
+        if diagnostics is not None:diagnostics['ml_rejection']='below_model_band'
+        return None
     # If both models fire, avoid contradictory publication unless one probability clearly wins.
     matched.sort(reverse=True)
     if len(matched)>1 and matched[0][0]-matched[1][0]<float(cfg.get('ml_direction_min_margin',0.08)):
+        if diagnostics is not None:diagnostics['ml_rejection']='direction_conflict'
         return None
     prob,name,direction=matched[0]
     last=rows[-1]

@@ -604,7 +604,7 @@ def run(cfg,once=False,offline=False):
                     completed=[r for r in rows if r['close_time']<=now()-2]
                     if completed:
                         info['candle_close_time']=int(completed[-1]['close_time'])
-                    event=two_model_engine.analyze(completed,cfg) if completed and now()-completed[-1]['close_time']<=650 else None
+                    event=two_model_engine.analyze(completed,cfg,info) if completed and now()-completed[-1]['close_time']<=650 else None
                     return info,event
                 except Exception as exc:
                     info['error']=str(exc)[:180]
@@ -621,6 +621,14 @@ def run(cfg,once=False,offline=False):
                         logging.warning('Market %s %s: %s',info['exchange'],info['symbol'],info['error'])
                     if event:
                         radar_candidates.append((info['exchange'],info['symbol'],event))
+            short_probs=[x['ml_short_extra_prob'] for x in scan_telemetry if 'ml_short_extra_prob' in x]
+            long_probs=[x['ml_long_forest_prob'] for x in scan_telemetry if 'ml_long_forest_prob' in x]
+            rejected={}
+            for x in scan_telemetry:
+                reason=x.get('ml_rejection')
+                if reason:rejected[reason]=rejected.get(reason,0)+1
+            logging.info('ML cycle max short=%s long=%s rejected=%s',
+                         max(short_probs) if short_probs else None,max(long_probs) if long_probs else None,rejected)
             coverage_monitor.update(con,scan_telemetry)
             metrics=coverage_monitor.snapshot(con,universe if cfg.get('auto_discovery') else work)
             logging.info('COVERAGE 5m=%s/%s (%.1f%%), failures=%s, p95 candle age=%ss',

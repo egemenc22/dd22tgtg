@@ -76,7 +76,8 @@ def record(con,exchange,symbol,event,cfg,clock=None):
                  (exchange,symbol,event['origin_ts'],event['kind'],event['direction'],score,json.dumps(event),t))
     except sqlite3.IntegrityError:return None
     ident=cur.lastrowid
-    if cfg.get('enable_telegram_free') and score>=int(cfg.get('radar_free_min_score',86)):
+    ml_event=str(event.get('kind','')).startswith('ML_')
+    if cfg.get('enable_telegram_free') and (ml_event or score>=int(cfg.get('radar_free_min_score',86))):
         cap=int(cfg.get('radar_free_daily_cap',2))
         interval=max(0,int(cfg.get('radar_free_min_interval_minutes',0)))*60
         interval_open=not interval or not con.execute(

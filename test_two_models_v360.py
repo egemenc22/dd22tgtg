@@ -26,8 +26,8 @@ class Tests(unittest.TestCase):
   long,_=barrier_outcomes(rows,[48*300000],24,.012,.007)
   self.assertEqual(long.tolist(),[0.0])
  def test_threshold_adapts_to_attainable_calibration(self):
-  cfg={'ml_probability_threshold':.65,'ml_probability_floor':.55}
+  cfg={'ml_probability_threshold':.65}
   self.assertEqual(two_model_engine.decision_threshold({'bins':[.31,.44,.61]},cfg),.61)
-  self.assertEqual(two_model_engine.decision_threshold({'bins':[.42,.49]},cfg),.55)
+  self.assertEqual(two_model_engine.decision_threshold({'bins':[.42,.49]},cfg),.49)
   self.assertEqual(two_model_engine.decision_threshold({'bins':[.70,.75]},cfg),.65)
 if __name__=='__main__':unittest.main()
