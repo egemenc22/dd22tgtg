@@ -50,4 +50,17 @@ class RadarTests(unittest.TestCase):
          'volume_ratio':1.2,'move_pct':.3,'quote_volume':50000,'price':1.0}
   self.assertIsNotNone(record(con,'Binance','AAAUSDT',event,cfg,clock=1000))
   self.assertEqual(con.execute("SELECT COUNT(*) FROM radar_delivery WHERE channel='telegram_vip'").fetchone()[0],1)
+ def test_free_channel_sends_at_most_one_signal_per_hour(self):
+  con=sqlite3.connect(':memory:');con.row_factory=sqlite3.Row;ensure_tables(con)
+  cfg={'enable_telegram_free':True,'enable_telegram_vip':False,'radar_min_score':50,
+       'radar_free_min_score':50,'radar_free_daily_cap':0,
+       'radar_free_min_interval_minutes':60,'radar_symbol_cooldown_minutes':60}
+  first=analyze(self.bars(80000,101))
+  second=dict(first,origin_ts=first['origin_ts']+300)
+  third=dict(first,origin_ts=first['origin_ts']+600)
+  self.assertIsNotNone(record(con,'Binance','AAAUSDT',first,cfg,clock=1000))
+  self.assertIsNotNone(record(con,'Binance','BBBUSDT',second,cfg,clock=2000))
+  self.assertIsNotNone(record(con,'Binance','CCCUSDT',third,cfg,clock=4601))
+  rows=con.execute("SELECT radar_id FROM radar_delivery WHERE channel='telegram_free' ORDER BY id").fetchall()
+  self.assertEqual(len(rows),2)
 if __name__=='__main__':unittest.main()

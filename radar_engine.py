@@ -78,7 +78,14 @@ def record(con,exchange,symbol,event,cfg,clock=None):
     ident=cur.lastrowid
     if cfg.get('enable_telegram_free') and score>=int(cfg.get('radar_free_min_score',86)):
         cap=int(cfg.get('radar_free_daily_cap',2))
-        if cap<=0 or con.execute("SELECT COUNT(*) FROM radar_delivery WHERE channel='telegram_free' AND created_at>=?",(t//86400*86400,)).fetchone()[0]<cap:
+        interval=max(0,int(cfg.get('radar_free_min_interval_minutes',0)))*60
+        interval_open=not interval or not con.execute(
+            "SELECT 1 FROM radar_delivery WHERE channel='telegram_free' AND created_at>? LIMIT 1",
+            (t-interval,)).fetchone()
+        daily_open=cap<=0 or con.execute(
+            "SELECT COUNT(*) FROM radar_delivery WHERE channel='telegram_free' AND created_at>=?",
+            (t//86400*86400,)).fetchone()[0]<cap
+        if interval_open and daily_open:
             con.execute('INSERT INTO radar_delivery(radar_id,channel,created_at) VALUES(?,?,?)',(ident,'telegram_free',t))
     if cfg.get('enable_telegram_vip'):
         cap=int(cfg.get('radar_vip_daily_cap',16))
