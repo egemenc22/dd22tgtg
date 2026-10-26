@@ -64,9 +64,11 @@ def ensure_tables(con):
 def record(con,exchange,symbol,event,cfg,clock=None):
     t=int(clock if clock is not None else time.time());score=int(event['score'])
     if score<int(cfg.get('radar_min_score',78)):return None
-    # Cross-exchange duplicate suppression: strongest first seen event wins.
+    # Cross-exchange/repeated-cycle suppression for the same setup. A genuine
+    # direction change is a new setup and must not be hidden by the cooldown.
     cooldown=max(30,int(cfg.get('radar_symbol_cooldown_minutes',180)))*60
-    if con.execute('SELECT 1 FROM radar_events WHERE symbol=? AND created_at>? LIMIT 1',(symbol,t-cooldown)).fetchone():return None
+    if con.execute('SELECT 1 FROM radar_events WHERE symbol=? AND direction=? AND created_at>? LIMIT 1',
+                   (symbol,event['direction'],t-cooldown)).fetchone():return None
     try:
         cur=con.execute('INSERT INTO radar_events(exchange,symbol,origin_ts,kind,direction,score,details,created_at) VALUES(?,?,?,?,?,?,?,?)',
                  (exchange,symbol,event['origin_ts'],event['kind'],event['direction'],score,json.dumps(event),t))
@@ -79,7 +81,8 @@ def record(con,exchange,symbol,event,cfg,clock=None):
     if cfg.get('enable_telegram_vip'):
         cap=int(cfg.get('radar_vip_daily_cap',16))
         used=con.execute("SELECT COUNT(*) FROM radar_delivery WHERE channel='telegram_vip' AND created_at>=?",(t//86400*86400,)).fetchone()[0]
-        if used<cap:con.execute('INSERT INTO radar_delivery(radar_id,channel,created_at) VALUES(?,?,?)',(ident,'telegram_vip',t))
+        if cap<=0 or used<cap:
+            con.execute('INSERT INTO radar_delivery(radar_id,channel,created_at) VALUES(?,?,?)',(ident,'telegram_vip',t))
     con.commit();return ident
 
 def _price_text(value):

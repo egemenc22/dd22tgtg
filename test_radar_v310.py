@@ -28,4 +28,18 @@ class RadarTests(unittest.TestCase):
   record(con,'Binance','AAAUSDT',analyze(self.bars(80000,101)),cfg,clock=1000000)
   publish(con,cfg,lambda *a:self.fail('should not call network'),clock=18000)
   self.assertEqual(con.execute('SELECT status FROM radar_delivery').fetchone()[0],'dry_run')
+ def test_vip_unlimited_but_same_direction_is_cooled_down(self):
+  con=sqlite3.connect(':memory:');con.row_factory=sqlite3.Row;ensure_tables(con)
+  cfg={'enable_telegram_free':False,'enable_telegram_vip':True,'radar_min_score':50,
+       'radar_vip_daily_cap':0,'radar_symbol_cooldown_minutes':60}
+  ev=analyze(self.bars(80000,101))
+  self.assertIsNotNone(record(con,'Binance','AAAUSDT',ev,cfg,clock=1000000))
+  repeated=dict(ev,origin_ts=ev['origin_ts']+300)
+  self.assertIsNone(record(con,'MEXC','AAAUSDT',repeated,cfg,clock=1000300))
+  reversed_event=dict(ev,direction='DOWN',origin_ts=ev['origin_ts']+600)
+  self.assertIsNotNone(record(con,'Binance','AAAUSDT',reversed_event,cfg,clock=1000600))
+  for i in range(30):
+   other=dict(ev,origin_ts=ev['origin_ts']+900+i*300)
+   self.assertIsNotNone(record(con,'Binance',f'COIN{i}USDT',other,cfg,clock=1000900+i))
+  self.assertEqual(con.execute("SELECT COUNT(*) FROM radar_delivery WHERE channel='telegram_vip'").fetchone()[0],32)
 if __name__=='__main__':unittest.main()
