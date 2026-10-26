@@ -63,7 +63,9 @@ def ensure_tables(con):
 
 def record(con,exchange,symbol,event,cfg,clock=None):
     t=int(clock if clock is not None else time.time());score=int(event['score'])
-    if score<int(cfg.get('radar_min_score',78)):return None
+    # ML events have already passed their model-specific calibrated threshold.
+    # The generic radar score belongs to rule-based activity events.
+    if not str(event.get('kind','')).startswith('ML_') and score<int(cfg.get('radar_min_score',78)):return None
     # Cross-exchange/repeated-cycle suppression for the same setup. A genuine
     # direction change is a new setup and must not be hidden by the cooldown.
     cooldown=max(30,int(cfg.get('radar_symbol_cooldown_minutes',180)))*60

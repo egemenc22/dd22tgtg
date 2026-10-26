@@ -542,6 +542,7 @@ def run(cfg,once=False,offline=False):
     if live:live.start()
     if gate:gate.start()
     if not two_model_engine.ready():logging.warning('TWO-MODEL ENGINE unavailable; check auto_bootstrap.log; no BUY/SELL will be published')
+    else:logging.info('ML decision thresholds: %s',two_model_engine.threshold_summary(cfg))
     # Older processes may have died while publishing; do not retry blindly.
     con.execute("UPDATE delivery SET status='needs_review',last_error='Process interrupted during remote delivery; reconcile manually' WHERE status='in_flight'")
     con.commit()

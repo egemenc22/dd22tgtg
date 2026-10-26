@@ -113,6 +113,7 @@
   "live_min_quote_volume": 12000,
   "gate_live_ws": false,
   "ml_probability_threshold": 0.65,
+  "ml_probability_floor": 0.55,
   "ml_direction_min_margin": 0.08,
   "coin_only_mode": true,
   "ml_auto_bootstrap": true,

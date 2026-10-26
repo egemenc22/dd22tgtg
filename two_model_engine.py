@@ -6,6 +6,26 @@ MODELS=Path(__file__).resolve().parent/'two_models'
 _cache={}
 PRODUCT_VERSION='scalp_2h_v1'
 
+def decision_threshold(cal,cfg=None):
+    """Use the requested probability when attainable, otherwise the best
+    calibrated band, with a quality floor. This prevents a trained model from
+    becoming permanently silent because none of its calibration bins can
+    reach a fixed global cutoff.
+    """
+    cfg=cfg or {}
+    requested=float(cfg.get('ml_probability_threshold',0.65))
+    floor=float(cfg.get('ml_probability_floor',0.55))
+    bins=[float(v) for v in cal.get('bins',[]) if math.isfinite(float(v))]
+    attainable=max(bins) if bins else requested
+    return max(floor,min(requested,attainable))
+
+def threshold_summary(cfg=None):
+    if not ready():return {}
+    try:c=json.loads((MODELS/'calibration.json').read_text(encoding='utf-8'))
+    except (OSError,ValueError):return {}
+    return {name:round(decision_threshold(c.get(name,{}),cfg),4)
+            for name in ('short_extra','long_forest')}
+
 def ready():
     if not all((MODELS/(k+'.joblib')).is_file() for k in ('short_extra','long_forest')) or not (MODELS/'calibration.json').is_file():return False
     try:c=json.loads((MODELS/'calibration.json').read_text(encoding='utf-8'))
@@ -48,13 +68,12 @@ def analyze(rows, cfg=None):
                 model=joblib.load(MODELS/(side+'.joblib'))
                 if hasattr(model,'n_jobs'):model.n_jobs=1
                 _cache[side]=(model,c[side])
-    threshold=float(cfg.get('ml_probability_threshold',0.65))
     matched=[]
     for name,dir_ in [('short_extra','DOWN'),('long_forest','UP')]:
         model,cal=_cache[name]
         raw=float(np.clip(np.expm1(model.predict(x)[0]),0,3))
         prob=float(cal_predict(np.array([raw]),np.array(cal['edges']),np.array(cal['bins']))[0])
-        if prob>=threshold:matched.append((prob,name,dir_))
+        if prob>=decision_threshold(cal,cfg):matched.append((prob,name,dir_))
     if not matched:return None
     # If both models fire, avoid contradictory publication unless one probability clearly wins.
     matched.sort(reverse=True)

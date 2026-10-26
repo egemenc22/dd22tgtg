@@ -42,4 +42,12 @@ class RadarTests(unittest.TestCase):
    other=dict(ev,origin_ts=ev['origin_ts']+900+i*300)
    self.assertIsNotNone(record(con,'Binance',f'COIN{i}USDT',other,cfg,clock=1000900+i))
   self.assertEqual(con.execute("SELECT COUNT(*) FROM radar_delivery WHERE channel='telegram_vip'").fetchone()[0],32)
+ def test_calibrated_ml_event_is_not_rejected_by_generic_radar_score(self):
+  con=sqlite3.connect(':memory:');con.row_factory=sqlite3.Row;ensure_tables(con)
+  cfg={'enable_telegram_free':False,'enable_telegram_vip':True,'radar_min_score':75,
+       'radar_vip_daily_cap':0,'radar_symbol_cooldown_minutes':60}
+  event={'score':61,'kind':'ML_RANDOM_FOREST_LONG','direction':'UP','origin_ts':900,
+         'volume_ratio':1.2,'move_pct':.3,'quote_volume':50000,'price':1.0}
+  self.assertIsNotNone(record(con,'Binance','AAAUSDT',event,cfg,clock=1000))
+  self.assertEqual(con.execute("SELECT COUNT(*) FROM radar_delivery WHERE channel='telegram_vip'").fetchone()[0],1)
 if __name__=='__main__':unittest.main()
